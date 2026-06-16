@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 from typing import List
 
 logger = logging.getLogger(__name__)

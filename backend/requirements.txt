@@ -14,3 +14,4 @@ sendgrid>=6.10.0
 twilio>=8.2.0
 httpx>=0.24.0
 asyncio>=3.4.3
+duckduckgo-search>=5.0.0
