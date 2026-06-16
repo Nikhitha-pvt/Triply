@@ -219,5 +219,5 @@ Open `http://localhost:3000` to run the application locally.
 ---
 
 ## 🔬 System Design Architecture Diagram
-*(Paste your generated Low-Level System Design diagram here!)*
-`![Triply System Architecture Design](docs/system_design.png)`
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/4d76738f-a632-4d81-8d45-a5863cb49c18" />
+
