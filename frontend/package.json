@@ -1,0 +1,31 @@
+{
+  "name": "triply-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.4",
+    "i18next": "^23.11.5",
+    "lucide-react": "^0.379.0",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-calendar-heatmap": "^1.9.0",
+    "react-dom": "^18",
+    "react-i18next": "^14.1.2",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
