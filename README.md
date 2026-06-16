@@ -39,7 +39,7 @@ graph TD
     Orch -->|Start WS Logs| WS[WebSocket Live Logger]
     WS -->|Real-Time Status Stream| ClientUI[Client Progress UI]
     
-    subgraph Agent Swarm (Parallel Execution)
+    subgraph "Agent Swarm (Parallel Execution)"
         Orch --> TA[Travel Agent]
         Orch --> AA[Accommodation Agent]
         Orch --> FA[Food Agent]
