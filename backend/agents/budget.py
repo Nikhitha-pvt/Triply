@@ -45,7 +45,7 @@ def calculate_group_split(
     if trip_req.adults <= 1:
         return None
         
-    names = trip_req.traveller_names or []
+    names = [name.strip() for name in (trip_req.traveller_names or []) if name and name.strip()]
     # Fill in names if missing
     while len(names) < trip_req.adults:
         names.append(f"Traveller {len(names) + 1}")

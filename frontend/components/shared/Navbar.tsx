@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Plane, Bell, LayoutDashboard, Map, Menu, X, Sparkles, User, LogOut, Lock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const navLinks = [
   { href: '/plan', label: 'Plan Trip', icon: <Map size={16} /> },
@@ -29,20 +30,38 @@ export default function Navbar() {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Load active session
-    const activeUser = localStorage.getItem('triply_user');
-    if (activeUser) {
-      setUser(JSON.parse(activeUser));
-    }
+    // Load active Supabase session
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const userObj = {
+          email: session.user.email,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0]
+        };
+        setUser(userObj);
+        localStorage.setItem('triply_user', JSON.stringify(userObj));
+      } else {
+        setUser(null);
+        localStorage.removeItem('triply_user');
+      }
+    };
+    fetchSession();
 
-    // Seed default user if not exists
-    const usersDbStr = localStorage.getItem('triply_users_db');
-    if (!usersDbStr) {
-      const defaultUsers = {
-        'niks@triply.ai': { email: 'niks@triply.ai', password: 'password', name: 'Niks' }
-      };
-      localStorage.setItem('triply_users_db', JSON.stringify(defaultUsers));
-    }
+    // Listen to active Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const userObj = {
+          email: session.user.email,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0]
+        };
+        setUser(userObj);
+        localStorage.setItem('triply_user', JSON.stringify(userObj));
+      } else {
+        setUser(null);
+        localStorage.removeItem('triply_user');
+      }
+      window.dispatchEvent(new Event('triply-auth-change'));
+    });
 
     // Handle cross-component auth sync
     const handleAuthChange = () => {
@@ -62,6 +81,7 @@ export default function Navbar() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('triply-auth-change', handleAuthChange);
       window.removeEventListener('triply-open-login', handleOpenLogin);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -77,59 +97,76 @@ export default function Navbar() {
   const menuIconColor = isHome && !scrolled ? 'text-white' : 'text-slate-600';
 
   // Handle Authentication submit
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     setAuthSuccess('');
-
-    const usersDb = JSON.parse(localStorage.getItem('triply_users_db') || '{}');
 
     if (isSignup) {
       if (!email || !password || !name) {
         setAuthError('All fields are required');
         return;
       }
-      if (usersDb[email.toLowerCase()]) {
-        setAuthError('User already exists');
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: email.toLowerCase(),
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (error) {
+        setAuthError(error.message);
         return;
       }
-      // Create new user
-      const newUser = { email: email.toLowerCase(), password, name };
-      usersDb[email.toLowerCase()] = newUser;
-      localStorage.setItem('triply_users_db', JSON.stringify(usersDb));
-      
-      // Auto login
-      localStorage.setItem('triply_user', JSON.stringify({ email: email.toLowerCase(), name }));
-      setAuthSuccess('Signup successful! Logging in...');
+
+      setAuthSuccess('Registration successful! Logging in...');
       setTimeout(() => {
-        setUser({ email: email.toLowerCase(), name });
         setShowAuthModal(false);
         resetAuthFields();
-        window.dispatchEvent(new Event('triply-auth-change'));
       }, 1000);
     } else {
       if (!email || !password) {
         setAuthError('Email and password are required');
         return;
       }
-      const existingUser = usersDb[email.toLowerCase()];
-      if (!existingUser || existingUser.password !== password) {
-        setAuthError('Invalid email or password');
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password
+      });
+
+      if (error) {
+        setAuthError(error.message);
         return;
       }
-      // Login successful
-      localStorage.setItem('triply_user', JSON.stringify({ email: existingUser.email, name: existingUser.name }));
+
       setAuthSuccess('Login successful!');
       setTimeout(() => {
-        setUser({ email: existingUser.email, name: existingUser.name });
         setShowAuthModal(false);
         resetAuthFields();
-        window.dispatchEvent(new Event('triply-auth-change'));
       }, 1000);
     }
   };
 
-  const handleLogout = () => {
+  const handleBypassAuth = () => {
+    const mockUser = {
+      email: 'demo@triply.ai',
+      name: 'Demo Traveller'
+    };
+    setUser(mockUser);
+    localStorage.setItem('triply_user', JSON.stringify(mockUser));
+    window.dispatchEvent(new Event('triply-auth-change'));
+    setAuthSuccess('Logged in using Demo Account!');
+    setTimeout(() => {
+      setShowAuthModal(false);
+      resetAuthFields();
+    }, 1000);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('triply_user');
     setUser(null);
     window.dispatchEvent(new Event('triply-auth-change'));
@@ -395,6 +432,20 @@ export default function Navbar() {
                 className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-blue-500/20"
               >
                 {isSignup ? 'Register' : 'Login'}
+              </button>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBypassAuth}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition border border-slate-200"
+              >
+                Bypass Auth (Use Demo Account)
               </button>
             </form>
 

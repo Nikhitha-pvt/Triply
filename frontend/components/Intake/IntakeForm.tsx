@@ -142,11 +142,24 @@ export default function IntakeForm({ onPlanCreated }: IntakeFormProps) {
     setStep(prev => prev - 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
     setErrorMsg(null);
     try {
-      const planResp = await createTripPlan(formData);
+      // Normalize traveler names: replace empty/whitespace strings with default values
+      const normalizedNames = [...formData.traveller_names];
+      for (let i = 0; i < formData.adults; i++) {
+        if (!normalizedNames[i] || !normalizedNames[i].trim()) {
+          normalizedNames[i] = `Traveller ${i + 1}`;
+        }
+      }
+
+      const payload = {
+        ...formData,
+        traveller_names: normalizedNames
+      };
+
+      const planResp = await createTripPlan(payload);
       onPlanCreated(planResp.plan_id);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to submit plan. Please check API connection.");
@@ -243,7 +256,23 @@ export default function IntakeForm({ onPlanCreated }: IntakeFormProps) {
 
       {/* MANUAL FORM MODE LAYOUT */}
       {mode === 'form' && (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form 
+          onSubmit={(e) => e.preventDefault()} 
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const target = e.target as HTMLElement;
+              if (target.tagName !== 'TEXTAREA' && target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                if (step < 6) {
+                  handleNext();
+                } else {
+                  handleSubmit(e);
+                }
+              }
+            }
+          }}
+          className="space-y-5"
+        >
           {/* Progress Bar */}
           <div className="w-full bg-slate-100 rounded-full h-1 mb-6">
             <div 
@@ -699,6 +728,7 @@ export default function IntakeForm({ onPlanCreated }: IntakeFormProps) {
 
             {step < 6 ? (
               <button
+                key="btn-next"
                 type="button"
                 onClick={handleNext}
                 className="flex items-center gap-1 text-xs font-semibold bg-primary hover:bg-blue-700 text-white rounded-btn px-4 py-2 shadow-sm transition"
@@ -707,7 +737,9 @@ export default function IntakeForm({ onPlanCreated }: IntakeFormProps) {
               </button>
             ) : (
               <button
-                type="submit"
+                key="btn-submit"
+                type="button"
+                onClick={() => handleSubmit()}
                 className="flex items-center gap-1.5 text-xs font-bold bg-tealAccent hover:bg-teal-700 text-white rounded-btn px-5 py-2 shadow-sm transition animate-pulse"
               >
                 {t('submit')} <ArrowRight size={14} />
